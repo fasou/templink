@@ -71,8 +71,18 @@ class TempLinkManager {
         // 保存到 localStorage（用于在同一页面内的分享功能）
         localStorage.setItem(`temp_link_${linkId}`, JSON.stringify(linkData));
         
-        // 生成完整的跳转链接，包含所有必要数据作为URL参数
-        const redirectUrl = `${this.baseUrl}/redirect.html?id=${linkId}&target=${encodeURIComponent(targetUrl)}&expiry=${expiryTimestamp}&created=${Date.now()}`;
+        // 将链接数据编码为JSON并进行base64编码
+        const linkDataEncoded = {
+            id: linkId,
+            target: targetUrl,
+            expiry: expiryTimestamp,
+            created: Date.now()
+        };
+        const dataString = JSON.stringify(linkDataEncoded);
+        const encodedData = btoa(encodeURIComponent(dataString)); // 先URL编码再base64编码
+        
+        // 生成完整的跳转链接，使用加密参数
+        const redirectUrl = `${this.baseUrl}/redirect.html?data=${encodedData}`;
         
         // 显示结果
         this.displayResult(redirectUrl, expiryTimestamp);
@@ -161,49 +171,60 @@ class TempLinkManager {
     generateShareLink() {
         const link = this.generatedLinkElement.textContent;
         const url = new URL(link);
-        const linkId = url.searchParams.get('id');
+        const encodedData = url.searchParams.get('data');
         
-        if (!linkId) {
+        if (!encodedData) {
             alert('无法生成分享链接');
             return;
         }
         
-        // 读取原始链接数据
-        const originalData = localStorage.getItem(`temp_link_${linkId}`);
-        if (!originalData) {
-            alert('原始链接数据不存在');
-            return;
+        try {
+            // 解码当前链接的数据
+            const decodedString = decodeURIComponent(atob(encodedData));
+            const linkData = JSON.parse(decodedString);
+            
+            const remainingTime = linkData.expiry - Date.now();
+            
+            if (remainingTime <= 0) {
+                alert('链接已过期，无法分享');
+                return;
+            }
+            
+            // 生成分享ID
+            const shareId = `${linkData.id}_share_${this.generateLinkId()}`;
+            const shareExpiry = Date.now() + remainingTime;
+            
+            // 创建分享链接数据
+            const shareLinkData = {
+                targetUrl: linkData.target,
+                expiry: shareExpiry,
+                sharedFrom: linkData.id,
+                created: Date.now(),
+                clicks: 0
+            };
+            
+            // 保存分享链接（用于向后兼容）
+            localStorage.setItem(`temp_link_${shareId}`, JSON.stringify(shareLinkData));
+            
+            // 生成加密的分享链接
+            const shareLinkEncoded = {
+                id: shareId,
+                target: linkData.target,
+                expiry: shareExpiry,
+                created: Date.now(),
+                shared: linkData.id
+            };
+            const dataString = JSON.stringify(shareLinkEncoded);
+            const newEncodedData = btoa(encodeURIComponent(dataString));
+            
+            const shareLink = `${this.baseUrl}/redirect.html?data=${newEncodedData}`;
+            
+            // 显示分享链接
+            alert(`分享链接已生成：\n\n${shareLink}\n\n剩余时间与原始链接相同：${Math.floor(remainingTime / (1000 * 60 * 60))}小时`);
+        } catch (error) {
+            console.error('生成分享链接失败:', error);
+            alert('生成分享链接失败，请重试');
         }
-        
-        const linkData = JSON.parse(originalData);
-        const remainingTime = linkData.expiry - Date.now();
-        
-        if (remainingTime <= 0) {
-            alert('链接已过期，无法分享');
-            return;
-        }
-        
-        // 生成分享ID
-        const shareId = `${linkId}_share_${this.generateLinkId()}`;
-        const shareExpiry = Date.now() + remainingTime;
-        
-        // 创建分享链接数据
-        const shareData = {
-            targetUrl: linkData.targetUrl,
-            expiry: shareExpiry,
-            sharedFrom: linkId,
-            created: Date.now(),
-            clicks: 0
-        };
-        
-        // 保存分享链接（用于向后兼容）
-        localStorage.setItem(`temp_link_${shareId}`, JSON.stringify(shareData));
-        
-        // 生成分享链接（通过URL参数传递所有必要数据）
-        const shareLink = `${this.baseUrl}/redirect.html?id=${shareId}&target=${encodeURIComponent(linkData.targetUrl)}&expiry=${shareExpiry}&created=${Date.now()}&shared=${linkId}`;
-        
-        // 显示分享链接
-        alert(`分享链接已生成：\n\n${shareLink}\n\n剩余时间与原始链接相同：${Math.floor(remainingTime / (1000 * 60 * 60))}小时`);
     }
     
     testRedirect() {

@@ -29,7 +29,47 @@ class RedirectManager {
     }
     
     loadLinkData() {
-        // 尝试从URL参数获取数据（主要方式）
+        // 尝试从加密的URL参数获取数据（主要方式）
+        const encodedData = this.urlParams.get('data');
+        
+        if (encodedData) {
+            try {
+                // 解码base64并解析JSON数据
+                const decodedString = decodeURIComponent(atob(encodedData));
+                const decodedData = JSON.parse(decodedString);
+                
+                const data = {
+                    targetUrl: decodedData.target,
+                    expiry: parseInt(decodedData.expiry),
+                    created: decodedData.created ? parseInt(decodedData.created) : Date.now(),
+                    clicks: 0
+                };
+                
+                // 保存linkId用于后续处理
+                this.linkId = decodedData.id;
+                
+                this.linkData = data;
+                
+                // 检查链接是否过期
+                const now = Date.now();
+                if (now > data.expiry) {
+                    this.showExpired();
+                    return;
+                }
+                
+                // 显示链接信息
+                this.displayLinkInfo(data);
+                
+                // 开始跳转倒计时
+                this.startRedirectCountdown(data.targetUrl);
+                return;
+            } catch (error) {
+                console.error('数据解码失败:', error);
+                // 如果解码失败，尝试其他方式
+            }
+        }
+        
+        // 如果没有加密数据，尝试旧的URL参数方式（向后兼容）
         const targetUrl = this.urlParams.get('target');
         const expiryParam = this.urlParams.get('expiry');
         const createdParam = this.urlParams.get('created');
@@ -104,7 +144,7 @@ class RedirectManager {
         this.clickCountElement.textContent = (data.clicks || 0) + 1;
         
         // 链接类型
-        const sharedFrom = data.sharedFrom || this.urlParams.get('shared');
+        const sharedFrom = data.sharedFrom;
         if (sharedFrom) {
             this.linkTypeElement.textContent = '分享链接（继承剩余时间）';
             data.sharedFrom = sharedFrom; // 保存到data对象中
@@ -178,11 +218,21 @@ class RedirectManager {
         // 保存分享链接（用于向后兼容）
         localStorage.setItem(`temp_link_${shareId}`, JSON.stringify(shareData));
         
-        // 生成分享链接（通过URL参数传递所有必要数据）
+        // 生成加密的分享链接数据
+        const linkDataEncoded = {
+            id: shareId,
+            target: this.linkData.targetUrl,
+            expiry: shareExpiry,
+            created: Date.now(),
+            shared: this.linkId
+        };
+        const dataString = JSON.stringify(linkDataEncoded);
+        const encodedData = btoa(encodeURIComponent(dataString));
+        
         // 获取正确的base URL（处理子路径）
         const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
         const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-        const shareLink = `${cleanBaseUrl}/redirect.html?id=${shareId}&target=${encodeURIComponent(this.linkData.targetUrl)}&expiry=${shareExpiry}&created=${Date.now()}&shared=${this.linkId}`;
+        const shareLink = `${cleanBaseUrl}/redirect.html?data=${encodedData}`;
         
         // 复制到剪贴板
         navigator.clipboard.writeText(shareLink)
