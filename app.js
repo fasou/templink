@@ -71,18 +71,13 @@ class TempLinkManager {
         // 保存到 localStorage（用于在同一页面内的分享功能）
         localStorage.setItem(`temp_link_${linkId}`, JSON.stringify(linkData));
         
-        // 将链接数据编码为JSON并进行base64编码
-        const linkDataEncoded = {
-            id: linkId,
-            target: targetUrl,
-            expiry: expiryTimestamp,
-            created: Date.now()
-        };
-        const dataString = JSON.stringify(linkDataEncoded);
-        const encodedData = btoa(encodeURIComponent(dataString)); // 先URL编码再base64编码
+        // 将链接数据编码为紧凑格式并进行base64编码
+        // 使用紧凑格式：id|target|expiry|created 并用base64编码
+        const compactData = `${linkId}|${targetUrl}|${expiryTimestamp}|${Date.now()}`;
+        const encodedData = btoa(compactData); // 直接base64编码，不进行URL编码
         
-        // 生成完整的跳转链接，使用加密参数
-        const redirectUrl = `${this.baseUrl}/redirect.html?data=${encodedData}`;
+        // 生成完整的跳转链接，使用加密参数（更短的格式）
+        const redirectUrl = `${this.baseUrl}/redirect.html?d=${encodedData}`;
         
         // 显示结果
         this.displayResult(redirectUrl, expiryTimestamp);
@@ -171,7 +166,7 @@ class TempLinkManager {
     generateShareLink() {
         const link = this.generatedLinkElement.textContent;
         const url = new URL(link);
-        const encodedData = url.searchParams.get('data');
+        const encodedData = url.searchParams.get('d') || url.searchParams.get('data');
         
         if (!encodedData) {
             alert('无法生成分享链接');
@@ -179,11 +174,34 @@ class TempLinkManager {
         }
         
         try {
-            // 解码当前链接的数据
-            const decodedString = decodeURIComponent(atob(encodedData));
-            const linkData = JSON.parse(decodedString);
+            // 先尝试紧凑格式
+            let targetUrl, expiry, linkId;
             
-            const remainingTime = linkData.expiry - Date.now();
+            try {
+                const decodedString = atob(encodedData);
+                const parts = decodedString.split('|');
+                
+                if (parts.length >= 4) {
+                    linkId = parts[0];
+                    targetUrl = parts[1];
+                    expiry = parseInt(parts[2]);
+                } else {
+                    throw new Error('紧凑格式解析失败');
+                }
+            } catch (compactError) {
+                // 如果紧凑格式失败，尝试JSON格式
+                try {
+                    const decodedString = decodeURIComponent(atob(encodedData));
+                    const linkData = JSON.parse(decodedString);
+                    linkId = linkData.id;
+                    targetUrl = linkData.target;
+                    expiry = parseInt(linkData.expiry);
+                } catch (jsonError) {
+                    throw new Error('所有格式解析失败');
+                }
+            }
+            
+            const remainingTime = expiry - Date.now();
             
             if (remainingTime <= 0) {
                 alert('链接已过期，无法分享');
@@ -191,14 +209,14 @@ class TempLinkManager {
             }
             
             // 生成分享ID
-            const shareId = `${linkData.id}_share_${this.generateLinkId()}`;
+            const shareId = `${linkId}_share_${this.generateLinkId()}`;
             const shareExpiry = Date.now() + remainingTime;
             
             // 创建分享链接数据
             const shareLinkData = {
-                targetUrl: linkData.target,
+                targetUrl: targetUrl,
                 expiry: shareExpiry,
-                sharedFrom: linkData.id,
+                sharedFrom: linkId,
                 created: Date.now(),
                 clicks: 0
             };
@@ -206,18 +224,11 @@ class TempLinkManager {
             // 保存分享链接（用于向后兼容）
             localStorage.setItem(`temp_link_${shareId}`, JSON.stringify(shareLinkData));
             
-            // 生成加密的分享链接
-            const shareLinkEncoded = {
-                id: shareId,
-                target: linkData.target,
-                expiry: shareExpiry,
-                created: Date.now(),
-                shared: linkData.id
-            };
-            const dataString = JSON.stringify(shareLinkEncoded);
-            const newEncodedData = btoa(encodeURIComponent(dataString));
+            // 生成紧凑格式的分享链接
+            const compactData = `${shareId}|${targetUrl}|${shareExpiry}|${Date.now()}|${linkId}`;
+            const newEncodedData = btoa(compactData);
             
-            const shareLink = `${this.baseUrl}/redirect.html?data=${newEncodedData}`;
+            const shareLink = `${this.baseUrl}/redirect.html?d=${newEncodedData}`;
             
             // 显示分享链接
             alert(`分享链接已生成：\n\n${shareLink}\n\n剩余时间与原始链接相同：${Math.floor(remainingTime / (1000 * 60 * 60))}小时`);

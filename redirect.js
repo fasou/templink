@@ -30,42 +30,81 @@ class RedirectManager {
     
     loadLinkData() {
         // 尝试从加密的URL参数获取数据（主要方式）
-        const encodedData = this.urlParams.get('data');
+        // 先尝试新的紧凑格式（d=参数）
+        const encodedData = this.urlParams.get('d') || this.urlParams.get('data');
         
         if (encodedData) {
             try {
-                // 解码base64并解析JSON数据
-                const decodedString = decodeURIComponent(atob(encodedData));
-                const decodedData = JSON.parse(decodedString);
+                // 解码base64
+                const decodedString = atob(encodedData);
                 
-                const data = {
-                    targetUrl: decodedData.target,
-                    expiry: parseInt(decodedData.expiry),
-                    created: decodedData.created ? parseInt(decodedData.created) : Date.now(),
-                    clicks: 0
-                };
+                // 解析紧凑格式：id|target|expiry|created
+                const parts = decodedString.split('|');
                 
-                // 保存linkId用于后续处理
-                this.linkId = decodedData.id;
-                
-                this.linkData = data;
-                
-                // 检查链接是否过期
-                const now = Date.now();
-                if (now > data.expiry) {
-                    this.showExpired();
+                if (parts.length >= 4) {
+                    const data = {
+                        targetUrl: parts[1],
+                        expiry: parseInt(parts[2]),
+                        created: parts[3] ? parseInt(parts[3]) : Date.now(),
+                        clicks: 0
+                    };
+                    
+                    // 保存linkId用于后续处理
+                    this.linkId = parts[0];
+                    
+                    this.linkData = data;
+                    
+                    // 检查链接是否过期
+                    const now = Date.now();
+                    if (now > data.expiry) {
+                        this.showExpired();
+                        return;
+                    }
+                    
+                    // 显示链接信息
+                    this.displayLinkInfo(data);
+                    
+                    // 开始跳转倒计时
+                    this.startRedirectCountdown(data.targetUrl);
                     return;
                 }
-                
-                // 显示链接信息
-                this.displayLinkInfo(data);
-                
-                // 开始跳转倒计时
-                this.startRedirectCountdown(data.targetUrl);
-                return;
             } catch (error) {
-                console.error('数据解码失败:', error);
-                // 如果解码失败，尝试其他方式
+                console.error('紧凑格式数据解码失败:', error);
+                
+                // 如果紧凑格式失败，尝试旧的JSON格式
+                try {
+                    // 解码base64并解析JSON数据
+                    const decodedString = decodeURIComponent(atob(encodedData));
+                    const decodedData = JSON.parse(decodedString);
+                    
+                    const data = {
+                        targetUrl: decodedData.target,
+                        expiry: parseInt(decodedData.expiry),
+                        created: decodedData.created ? parseInt(decodedData.created) : Date.now(),
+                        clicks: 0
+                    };
+                    
+                    // 保存linkId用于后续处理
+                    this.linkId = decodedData.id;
+                    
+                    this.linkData = data;
+                    
+                    // 检查链接是否过期
+                    const now = Date.now();
+                    if (now > data.expiry) {
+                        this.showExpired();
+                        return;
+                    }
+                    
+                    // 显示链接信息
+                    this.displayLinkInfo(data);
+                    
+                    // 开始跳转倒计时
+                    this.startRedirectCountdown(data.targetUrl);
+                    return;
+                } catch (jsonError) {
+                    console.error('JSON格式数据解码失败:', jsonError);
+                }
             }
         }
         
@@ -218,21 +257,14 @@ class RedirectManager {
         // 保存分享链接（用于向后兼容）
         localStorage.setItem(`temp_link_${shareId}`, JSON.stringify(shareData));
         
-        // 生成加密的分享链接数据
-        const linkDataEncoded = {
-            id: shareId,
-            target: this.linkData.targetUrl,
-            expiry: shareExpiry,
-            created: Date.now(),
-            shared: this.linkId
-        };
-        const dataString = JSON.stringify(linkDataEncoded);
-        const encodedData = btoa(encodeURIComponent(dataString));
+        // 生成紧凑格式的分享链接数据
+        const compactData = `${shareId}|${this.linkData.targetUrl}|${shareExpiry}|${Date.now()}|${this.linkId}`;
+        const encodedData = btoa(compactData);
         
         // 获取正确的base URL（处理子路径）
         const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
         const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-        const shareLink = `${cleanBaseUrl}/redirect.html?data=${encodedData}`;
+        const shareLink = `${cleanBaseUrl}/redirect.html?d=${encodedData}`;
         
         // 复制到剪贴板
         navigator.clipboard.writeText(shareLink)
