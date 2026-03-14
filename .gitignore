@@ -1,0 +1,28 @@
+# IDE and editor files
+.DS_Store
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary files
+temp/
+tmp/
+
+# Logs
+*.log
+
+# Local storage backup
+.localstorage_backup/

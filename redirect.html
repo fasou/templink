@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>正在跳转...</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 36px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 20px;
+        }
+        
+        .loader {
+            margin: 30px auto;
+            width: 60px;
+            height: 60px;
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .countdown {
+            font-size: 24px;
+            color: #667eea;
+            margin: 20px 0;
+            font-weight: 600;
+        }
+        
+        .target-url {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            word-break: break-all;
+            font-family: monospace;
+            border-left: 4px solid #667eea;
+        }
+        
+        .info-box {
+            background: #fff8e1;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .info-box h4 {
+            color: #d97706;
+            margin-bottom: 10px;
+        }
+        
+        .warning {
+            background: #fee;
+            border: 2px solid #f44336;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .warning.active {
+            display: block;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .footer {
+            margin-top: 30px;
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .share-info {
+            background: #e8f4fd;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .share-info h4 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .logo {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">⏰ TempLink</div>
+        <h2>正在跳转到目标页面...</h2>
+        
+        <div class="loader"></div>
+        <div class="countdown" id="countdown">3</div>
+        
+        <div class="target-url" id="targetUrl"></div>
+        
+        <div class="info-box">
+            <h4>📋 链接信息</h4>
+            <p>• 链接类型：<span id="linkType">临时跳转链接</span></p>
+            <p>• 剩余时间：<span id="timeRemaining">计算中...</span></p>
+            <p>• 创建时间：<span id="createdAt">-</span></p>
+            <p>• 访问次数：<span id="clickCount">0</span></p>
+        </div>
+        
+        <div class="share-info" id="shareInfo">
+            <h4>🔗 分享功能</h4>
+            <p>此链接可以分享给其他人，被分享的链接会继承剩余时间。</p>
+            <button id="copyShareBtn">复制分享链接</button>
+            <button id="showShareBtn">查看分享规则</button>
+        </div>
+        
+        <div class="warning" id="warning">
+            <h3 style="color: #f44336;">⚠️ 警告</h3>
+            <p>这个链接已经过期，无法继续跳转。</p>
+            <p>临时链接的有效期为48小时，请向链接创建者请求新的链接。</p>
+            <button onclick="window.location.href='index.html'">返回主页创建新链接</button>
+        </div>
+        
+        <div class="footer">
+            <p>⏰ 临时链接将在48小时后失效</p>
+            <p>© 2024 TempLink | 免费链接跳转服务</p>
+        </div>
+    </div>
+
+    <script src="redirect.js"></script>
+</body>
+</html>
