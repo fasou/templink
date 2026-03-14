@@ -4,7 +4,6 @@ class RedirectManager {
         this.linkId = this.urlParams.get('id');
         
         this.countdownElement = document.getElementById('countdown');
-        this.targetUrlElement = document.getElementById('targetUrl');
         this.timeRemainingElement = document.getElementById('timeRemaining');
         this.createdAtElement = document.getElementById('createdAt');
         this.clickCountElement = document.getElementById('clickCount');
@@ -59,8 +58,6 @@ class RedirectManager {
     }
     
     displayLinkInfo(data) {
-        this.targetUrlElement.textContent = data.targetUrl;
-        
         // 计算剩余时间
         const remaining = data.expiry - Date.now();
         const hours = Math.floor(remaining / (1000 * 60 * 60));
