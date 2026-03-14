@@ -68,11 +68,11 @@ class TempLinkManager {
             clicks: 0
         };
         
-        // 保存到 localStorage
+        // 保存到 localStorage（用于在同一页面内的分享功能）
         localStorage.setItem(`temp_link_${linkId}`, JSON.stringify(linkData));
         
-        // 生成完整的跳转链接
-        const redirectUrl = `${this.baseUrl}/redirect.html?id=${linkId}`;
+        // 生成完整的跳转链接，包含所有必要数据作为URL参数
+        const redirectUrl = `${this.baseUrl}/redirect.html?id=${linkId}&target=${encodeURIComponent(targetUrl)}&expiry=${expiryTimestamp}&created=${Date.now()}`;
         
         // 显示结果
         this.displayResult(redirectUrl, expiryTimestamp);
@@ -196,11 +196,11 @@ class TempLinkManager {
             clicks: 0
         };
         
-        // 保存分享链接
+        // 保存分享链接（用于向后兼容）
         localStorage.setItem(`temp_link_${shareId}`, JSON.stringify(shareData));
         
-        // 生成分享链接
-        const shareLink = `${this.baseUrl}/redirect.html?id=${shareId}`;
+        // 生成分享链接（通过URL参数传递所有必要数据）
+        const shareLink = `${this.baseUrl}/redirect.html?id=${shareId}&target=${encodeURIComponent(linkData.targetUrl)}&expiry=${shareExpiry}&created=${Date.now()}&shared=${linkId}`;
         
         // 显示分享链接
         alert(`分享链接已生成：\n\n${shareLink}\n\n剩余时间与原始链接相同：${Math.floor(remainingTime / (1000 * 60 * 60))}小时`);

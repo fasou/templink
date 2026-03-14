@@ -29,6 +29,37 @@ class RedirectManager {
     }
     
     loadLinkData() {
+        // 尝试从URL参数获取数据（主要方式）
+        const targetUrl = this.urlParams.get('target');
+        const expiryParam = this.urlParams.get('expiry');
+        const createdParam = this.urlParams.get('created');
+        
+        if (targetUrl && expiryParam) {
+            // 使用URL参数中的数据
+            const data = {
+                targetUrl: decodeURIComponent(targetUrl),
+                expiry: parseInt(expiryParam),
+                created: createdParam ? parseInt(createdParam) : Date.now(),
+                clicks: 0
+            };
+            this.linkData = data;
+            
+            // 检查链接是否过期
+            const now = Date.now();
+            if (now > data.expiry) {
+                this.showExpired();
+                return;
+            }
+            
+            // 显示链接信息
+            this.displayLinkInfo(data);
+            
+            // 开始跳转倒计时
+            this.startRedirectCountdown(data.targetUrl);
+            return;
+        }
+        
+        // 如果URL参数中没有数据，尝试从localStorage读取（向后兼容）
         const linkData = localStorage.getItem(`temp_link_${this.linkId}`);
         
         if (!linkData) {
@@ -69,19 +100,21 @@ class RedirectManager {
         const createdDate = new Date(data.created);
         this.createdAtElement.textContent = createdDate.toLocaleString('zh-CN');
         
-        // 访问次数
-        this.clickCountElement.textContent = data.clicks || 1;
+        // 访问次数（URL参数传递的链接初始点击数为0）
+        this.clickCountElement.textContent = (data.clicks || 0) + 1;
         
         // 链接类型
-        if (data.sharedFrom) {
+        const sharedFrom = data.sharedFrom || this.urlParams.get('shared');
+        if (sharedFrom) {
             this.linkTypeElement.textContent = '分享链接（继承剩余时间）';
+            data.sharedFrom = sharedFrom; // 保存到data对象中
             this.showShareRules();
         } else {
             this.linkTypeElement.textContent = '原始链接';
         }
         
         // 如果是分享链接，隐藏分享按钮
-        if (data.sharedFrom) {
+        if (sharedFrom) {
             this.shareInfoElement.style.display = 'none';
         }
     }
@@ -142,14 +175,14 @@ class RedirectManager {
             clicks: 0
         };
         
-        // 保存分享链接
+        // 保存分享链接（用于向后兼容）
         localStorage.setItem(`temp_link_${shareId}`, JSON.stringify(shareData));
         
-        // 生成分享链接
+        // 生成分享链接（通过URL参数传递所有必要数据）
         // 获取正确的base URL（处理子路径）
         const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
         const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-        const shareLink = `${cleanBaseUrl}/redirect.html?id=${shareId}`;
+        const shareLink = `${cleanBaseUrl}/redirect.html?id=${shareId}&target=${encodeURIComponent(this.linkData.targetUrl)}&expiry=${shareExpiry}&created=${Date.now()}&shared=${this.linkId}`;
         
         // 复制到剪贴板
         navigator.clipboard.writeText(shareLink)
