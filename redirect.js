@@ -149,7 +149,10 @@ class RedirectManager {
         localStorage.setItem(`temp_link_${shareId}`, JSON.stringify(shareData));
         
         // 生成分享链接
-        const shareLink = `${window.location.origin}/redirect.html?id=${shareId}`;
+        // 获取正确的base URL（处理子路径）
+        const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
+        const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+        const shareLink = `${cleanBaseUrl}/redirect.html?id=${shareId}`;
         
         // 复制到剪贴板
         navigator.clipboard.writeText(shareLink)

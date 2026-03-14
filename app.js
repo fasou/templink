@@ -1,6 +1,12 @@
 class TempLinkManager {
     constructor() {
-        this.baseUrl = window.location.origin;
+        // 获取基础URL，处理GitHub Pages的子路径
+        this.baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
+        if (this.baseUrl.endsWith('/')) {
+            this.baseUrl = this.baseUrl.slice(0, -1);
+        }
+        console.log('Base URL:', this.baseUrl);
+        
         this.targetUrlInput = document.getElementById('targetUrl');
         this.customSlugInput = document.getElementById('customSlug');
         this.generateBtn = document.getElementById('generateBtn');
