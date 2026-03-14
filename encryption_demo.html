@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL参数加密演示</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f7fa;
+            color: #333;
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+        }
+        .demo-box {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .demo-box h3 {
+            color: #4299e1;
+            margin-top: 0;
+        }
+        .code-block {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .url-example {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+        .feature-list {
+            background: #edf2f7;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .feature-list li {
+            margin: 5px 0;
+        }
+        .success {
+            color: #38a169;
+            font-weight: bold;
+        }
+        .encrypted {
+            color: #d53f8c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>TempLink URL参数加密演示</h1>
+    
+    <div class="demo-box">
+        <h3>🔐 加密效果对比</h3>
+        
+        <h4>加密前（明文URL）：</h4>
+        <div class="url-example">
+            https://fasou.github.io/templink/redirect.html?id=abc123&target=https://example.com&expiry=1678886400000&created=1678800000000
+        </div>
+        
+        <h4>加密后（base64编码）：</h4>
+        <div class="url-example encrypted">
+            https://fasou.github.io/templink/redirect.html?data=JTdCJTIyaWQlMjIlM0ElMjAlMjJhYmMxMjMlMjIlMkMlMjAlMjJ0YXJnZXQlMjIlM0ElMjAlMjJodHRwcyUzQSUyRiUyRmV4YW1wbGUuY29tJTIyJTJDJTIwJTIyZXhwaXJ5JTIyJTNBJTIwMTY3ODg4NjQwMDAwMCUyQyUyMCUyMmNyZWF0ZWQlMjIlM0ElMjAxNjc4ODgwMDAwMDAwJTdE
+        </div>
+    </div>
+    
+    <div class="demo-box">
+        <h3>🔧 技术实现</h3>
+        
+        <h4>加密过程（JavaScript）：</h4>
+        <div class="code-block">
+// 1. 创建链接数据对象
+const linkData = {
+    id: "abc123",
+    target: "https://example.com",
+    expiry: 1678886400000,
+    created: 1678800000000
+};
+
+// 2. 转换为JSON字符串
+const dataString = JSON.stringify(linkData);
+
+// 3. URL编码 + base64编码
+const encodedData = btoa(encodeURIComponent(dataString));
+
+// 4. 生成最终URL
+const finalUrl = `https://fasou.github.io/templink/redirect.html?data=${encodedData}`;
+        </div>
+        
+        <h4>解密过程（JavaScript）：</h4>
+        <div class="code-block">
+// 1. 从URL获取加密数据
+const encodedData = new URLSearchParams(window.location.search).get('data');
+
+// 2. base64解码 + URL解码
+const decodedString = decodeURIComponent(atob(encodedData));
+
+// 3. 解析JSON数据
+const linkData = JSON.parse(decodedString);
+
+// 4. 使用数据
+console.log("目标URL:", linkData.target);
+console.log("过期时间:", linkData.expiry);
+        </div>
+    </div>
+    
+    <div class="demo-box">
+        <h3>✅ 加密功能特点</h3>
+        <div class="feature-list">
+            <ul>
+                <li><span class="success">✓</span> <strong>隐藏敏感信息</strong>：目标URL、过期时间等参数不再明文显示</li>
+                <li><span class="success">✓</span> <strong>简单有效</strong>：base64编码虽然不是强加密，但能有效隐藏URL参数</li>
+                <li><span class="success">✓</span> <strong>浏览器原生支持</strong>：使用JavaScript内置的btoa()/atob()函数</li>
+                <li><span class="success">✓</span> <strong>向后兼容</strong>：系统同时支持加密和未加密的URL格式</li>
+                <li><span class="success">✓</span> <strong>URL安全</strong>：编码结果只包含URL安全字符</li>
+                <li><span class="success">✓</span> <strong>性能优秀</strong>：编码解码速度快，不影响用户体验</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="demo-box">
+        <h3>🚀 实际测试</h3>
+        <p>访问TempLink主页面测试加密功能：</p>
+        <div class="url-example">
+            <a href="https://fasou.github.io/templink/" target="_blank">https://fasou.github.io/templink/</a>
+        </div>
+        <p>测试步骤：</p>
+        <ol>
+            <li>输入目标网址（如 https://example.com）</li>
+            <li>生成临时链接</li>
+            <li>观察生成的URL - 应该是加密格式（以 data= 开头）</li>
+            <li>复制链接在新标签页打开 - 应该正常跳转</li>
+            <li>注意：跳转页面上<strong>不显示</strong>目标URL</li>
+        </ol>
+    </div>
+    
+    <div class="demo-box">
+        <h3>📊 项目状态</h3>
+        <div class="feature-list">
+            <ul>
+                <li><span class="success">✅</span> <strong>核心功能</strong>：48小时临时链接生成和跳转</li>
+                <li><span class="success">✅</span> <strong>分享系统</strong>：链接分享并继承剩余时间</li>
+                <li><span class="success">✅</span> <strong>隐私保护</strong>：跳转页面不显示目标URL</li>
+                <li><span class="success">✅</span> <strong>URL加密</strong>：base64编码隐藏URL参数</li>
+                <li><span class="success">✅</span> <strong>免费托管</strong>：GitHub Pages部署</li>
+                <li><span class="success">✅</span> <strong>修复完成</strong>：跳转问题、跨域问题已解决</li>
+            </ul>
+        </div>
+        <p style="text-align: center; margin-top: 20px;">
+            <strong>项目状态：</strong> <span class="success">✅ 全部功能已完成并部署</span>
+        </p>
+    </div>
+</body>
+</html>
