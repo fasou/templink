@@ -1,7 +1,10 @@
 class RedirectManager {
     constructor() {
         this.urlParams = new URLSearchParams(window.location.search);
+        
+        // 尝试获取链接ID（支持旧格式和新加密格式）
         this.linkId = this.urlParams.get('id');
+        this.encodedData = this.urlParams.get('d') || this.urlParams.get('data');
         
         this.countdownElement = document.getElementById('countdown');
         this.timeRemainingElement = document.getElementById('timeRemaining');
@@ -17,8 +20,9 @@ class RedirectManager {
     }
     
     init() {
-        if (!this.linkId) {
-            this.showError('缺少链接ID参数');
+        // 检查是否有有效的参数（id参数或加密数据）
+        if (!this.linkId && !this.encodedData) {
+            this.showError('缺少链接参数');
             return;
         }
         
@@ -29,14 +33,11 @@ class RedirectManager {
     }
     
     loadLinkData() {
-        // 尝试从加密的URL参数获取数据（主要方式）
-        // 先尝试新的紧凑格式（d=参数）
-        const encodedData = this.urlParams.get('d') || this.urlParams.get('data');
-        
-        if (encodedData) {
+        // 先尝试加密格式（d=参数）
+        if (this.encodedData) {
             try {
                 // 解码base64
-                const decodedString = atob(encodedData);
+                const decodedString = atob(this.encodedData);
                 
                 // 解析紧凑格式：id|target|expiry|created
                 const parts = decodedString.split('|');
@@ -74,7 +75,7 @@ class RedirectManager {
                 // 如果紧凑格式失败，尝试旧的JSON格式
                 try {
                     // 解码base64并解析JSON数据
-                    const decodedString = decodeURIComponent(atob(encodedData));
+                    const decodedString = decodeURIComponent(atob(this.encodedData));
                     const decodedData = JSON.parse(decodedString);
                     
                     const data = {
@@ -104,23 +105,52 @@ class RedirectManager {
                     return;
                 } catch (jsonError) {
                     console.error('JSON格式数据解码失败:', jsonError);
+                    this.showError('链接数据格式错误');
+                    return;
                 }
             }
         }
         
         // 如果没有加密数据，尝试旧的URL参数方式（向后兼容）
-        const targetUrl = this.urlParams.get('target');
-        const expiryParam = this.urlParams.get('expiry');
-        const createdParam = this.urlParams.get('created');
-        
-        if (targetUrl && expiryParam) {
-            // 使用URL参数中的数据
-            const data = {
-                targetUrl: decodeURIComponent(targetUrl),
-                expiry: parseInt(expiryParam),
-                created: createdParam ? parseInt(createdParam) : Date.now(),
-                clicks: 0
-            };
+        if (this.linkId) {
+            const targetUrl = this.urlParams.get('target');
+            const expiryParam = this.urlParams.get('expiry');
+            const createdParam = this.urlParams.get('created');
+            
+            if (targetUrl && expiryParam) {
+                // 使用URL参数中的数据
+                const data = {
+                    targetUrl: decodeURIComponent(targetUrl),
+                    expiry: parseInt(expiryParam),
+                    created: createdParam ? parseInt(createdParam) : Date.now(),
+                    clicks: 0
+                };
+                this.linkData = data;
+                
+                // 检查链接是否过期
+                const now = Date.now();
+                if (now > data.expiry) {
+                    this.showExpired();
+                    return;
+                }
+                
+                // 显示链接信息
+                this.displayLinkInfo(data);
+                
+                // 开始跳转倒计时
+                this.startRedirectCountdown(data.targetUrl);
+                return;
+            }
+            
+            // 如果URL参数中没有完整数据，尝试从localStorage读取（向后兼容）
+            const linkData = localStorage.getItem(`temp_link_${this.linkId}`);
+            
+            if (!linkData) {
+                this.showError('链接不存在或已删除');
+                return;
+            }
+            
+            const data = JSON.parse(linkData);
             this.linkData = data;
             
             // 检查链接是否过期
@@ -133,38 +163,17 @@ class RedirectManager {
             // 显示链接信息
             this.displayLinkInfo(data);
             
+            // 更新点击次数
+            data.clicks = (data.clicks || 0) + 1;
+            localStorage.setItem(`temp_link_${this.linkId}`, JSON.stringify(data));
+            
             // 开始跳转倒计时
             this.startRedirectCountdown(data.targetUrl);
             return;
         }
         
-        // 如果URL参数中没有数据，尝试从localStorage读取（向后兼容）
-        const linkData = localStorage.getItem(`temp_link_${this.linkId}`);
-        
-        if (!linkData) {
-            this.showError('链接不存在或已删除');
-            return;
-        }
-        
-        const data = JSON.parse(linkData);
-        this.linkData = data;
-        
-        // 检查链接是否过期
-        const now = Date.now();
-        if (now > data.expiry) {
-            this.showExpired();
-            return;
-        }
-        
-        // 显示链接信息
-        this.displayLinkInfo(data);
-        
-        // 更新点击次数
-        data.clicks = (data.clicks || 0) + 1;
-        localStorage.setItem(`temp_link_${this.linkId}`, JSON.stringify(data));
-        
-        // 开始跳转倒计时
-        this.startRedirectCountdown(data.targetUrl);
+        // 如果既没有加密数据也没有linkId，显示错误
+        this.showError('链接参数无效');
     }
     
     displayLinkInfo(data) {
